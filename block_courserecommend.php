@@ -5,7 +5,7 @@ class block_courserecommend extends block_base {
     }
 
     public function get_content() {
-        global $COURSE, $DB, $OUTPUT, $USER, $CFG;
+        global $COURSE, $DB, $OUTPUT, $USER, $CFG, $PAGE;
         require_once($CFG->dirroot . '/course/lib.php');
 
         if ($this->content !== null) {
@@ -22,7 +22,7 @@ class block_courserecommend extends block_base {
                 JOIN {local_courserecommend} cr ON c.id = cr.courseid
                 JOIN {user} u ON u.id = cr.recommendedby
                 JOIN {course_categories} cc ON c.category = cc.id
-                WHERE cr.userid = :userid
+                WHERE cr.recommendedto = :userid
                 ORDER BY cr.timemodified DESC";
         $params = array('userid' => $USER->id);
         $recommendedcourses = $DB->get_records_sql($sql, $params);
@@ -63,12 +63,27 @@ class block_courserecommend extends block_base {
                 $coursecat = $course->categoryname;
                 $courseimg = $courseimage;
 
+                // Get recommended string
+                $recommended_by = get_string('recommended_by', 'local_courserecommend');
+                
+                // Get recommender user object
+                $recommender = $DB->get_record('user', array('id' => $course->recommenderid));
+                
+                // Get user picture URL
+                $userpicture = new user_picture($recommender);
+                $userpicture->size = 1; // Size 1 = 30px
+                $pictureurl = $userpicture->get_url($PAGE);
+
                 $textX .= <<<EOD
                       <a class="card dashboard-card" href="$courselink">
                         <div class="card-img dashboard-card-img" style='background-image: url("$courseimg");'></div>
                         <div class="card-body pr-1 course-info-container c-card-cont">
                             <p class="c-name">$coursename</p>
                             <p class="c-cat-name">$coursecat</p>
+                            <p class="c-recommender" style="font-size: 0.8rem; color: #666; margin-top: 4px; display: flex; align-items: center;">
+                                <img src="$pictureurl" class="recommender-pic" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px; object-fit: cover;" alt=""> 
+                                {$recommender->firstname} {$recommender->lastname} {$recommended_by}
+                            </p>
                         </div>
                       </a>
                       EOD;
